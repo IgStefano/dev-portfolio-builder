@@ -103,6 +103,7 @@ export interface GitHubProfile {
 
 export interface HealthResponse {
   status: string;
+  anthropic_key_present: boolean;
 }
 
 export interface Hero {
@@ -323,7 +324,7 @@ export const useIngestApiIngestPost = <TError = ErrorResponse | ErrorResponse | 
     }
     
 /**
- * Accept a profile + preferences and return a generated site (stub).
+ * Accept a profile + preferences and return a generated site.
  * @summary Generate
  */
 export const generateApiGeneratePost = (
