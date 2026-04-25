@@ -8,6 +8,48 @@ import type { PreviewPayload } from '../lib/previewChannel'
 import { usePreviewSender } from '../lib/previewChannel'
 import { ApiRequestError } from '../api/client'
 
+type ViewportPreset = 'desktop' | 'tablet' | 'mobile'
+
+const VIEWPORT_WIDTHS: Record<ViewportPreset, { width: string; label: string }> = {
+  desktop: { width: '100%', label: 'Desktop' },
+  tablet: { width: '768px', label: 'Tablet' },
+  mobile: { width: '390px', label: 'Mobile' },
+}
+
+function MonitorIcon({ className }: { className?: string }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <rect x="2" y="3" width="20" height="14" rx="2" />
+      <line x1="8" y1="21" x2="16" y2="21" />
+      <line x1="12" y1="17" x2="12" y2="21" />
+    </svg>
+  )
+}
+
+function TabletIcon({ className }: { className?: string }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <rect x="4" y="2" width="16" height="20" rx="2" />
+      <line x1="12" y1="18" x2="12" y2="18" />
+    </svg>
+  )
+}
+
+function SmartphoneIcon({ className }: { className?: string }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <rect x="5" y="2" width="14" height="20" rx="2" />
+      <line x1="12" y1="18" x2="12" y2="18" />
+    </svg>
+  )
+}
+
+const VIEWPORT_ICONS: Record<ViewportPreset, typeof MonitorIcon> = {
+  desktop: MonitorIcon,
+  tablet: TabletIcon,
+  mobile: SmartphoneIcon,
+}
+
 const SESSION_KEY = 'dpb:draft'
 
 type PreviewSearch = {
@@ -33,6 +75,7 @@ export const Route = createFileRoute('/preview')({
 function PreviewPage() {
   const navigate = useNavigate()
   const { site: siteJson, theme: searchTheme } = Route.useSearch()
+  const [viewport, setViewport] = useState<ViewportPreset>('desktop')
 
   // Mutable state for the current site (updated on tweaks/regeneration)
   const [currentSite, setCurrentSite] = useState<GeneratedSite | null>(null)
@@ -228,16 +271,40 @@ function PreviewPage() {
                   ? `${site.hero.headline.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-$/, '')}.dev`
                   : 'your-portfolio.dev'}
               </div>
+              {/* Viewport toggles */}
+              <div className="flex items-center gap-1 rounded-lg bg-gray-800 p-1">
+                {(Object.keys(VIEWPORT_WIDTHS) as ViewportPreset[]).map((preset) => {
+                  const Icon = VIEWPORT_ICONS[preset]
+                  const isActive = viewport === preset
+                  return (
+                    <button
+                      key={preset}
+                      onClick={() => setViewport(preset)}
+                      title={VIEWPORT_WIDTHS[preset].label}
+                      className={`rounded-md p-1.5 transition-colors ${
+                        isActive
+                          ? 'bg-gray-700 text-gray-200'
+                          : 'text-gray-500 hover:text-gray-300'
+                      }`}
+                    >
+                      <Icon className="h-3.5 w-3.5" />
+                    </button>
+                  )
+                })}
+              </div>
             </div>
 
-            {/* Iframe */}
-            <iframe
-              ref={iframeRef}
-              src="/render"
-              onLoad={onIframeLoad}
-              title="Site preview"
-              className="h-[600px] w-full border-0 bg-white"
-            />
+            {/* Iframe viewport */}
+            <div className="flex justify-center bg-gray-950 p-0 transition-[padding] duration-300" style={viewport !== 'desktop' ? { padding: '16px' } : undefined}>
+              <iframe
+                ref={iframeRef}
+                src="/render"
+                onLoad={onIframeLoad}
+                title="Site preview"
+                className="h-[600px] border-0 bg-white transition-[width] duration-300 ease-in-out"
+                style={{ width: VIEWPORT_WIDTHS[viewport].width }}
+              />
+            </div>
           </div>
 
           {/* Side panel */}
