@@ -5,24 +5,6 @@
     "version": "0.1.0"
   },
   "paths": {
-    "/": {
-      "get": {
-        "summary": "Root",
-        "operationId": "root__get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/MessageResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/health": {
       "get": {
         "summary": "Health",
@@ -40,10 +22,377 @@
           }
         }
       }
+    },
+    "/api/ingest": {
+      "post": {
+        "summary": "Ingest",
+        "description": "Accept a GitHub URL and return a structured profile (stub).",
+        "operationId": "ingest_api_ingest_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IngestRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GitHubProfile"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/generate": {
+      "post": {
+        "summary": "Generate",
+        "description": "Accept a profile + preferences and return a generated site (stub).",
+        "operationId": "generate_api_generate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GenerateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GeneratedSite"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Bad Gateway",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
     "schemas": {
+      "About": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "title": "Text"
+          }
+        },
+        "type": "object",
+        "required": [
+          "text"
+        ],
+        "title": "About"
+      },
+      "BlogPostStub": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "summary": {
+            "type": "string",
+            "title": "Summary"
+          },
+          "date": {
+            "type": "string",
+            "title": "Date"
+          }
+        },
+        "type": "object",
+        "required": [
+          "title",
+          "summary",
+          "date"
+        ],
+        "title": "BlogPostStub"
+      },
+      "BlogSection": {
+        "properties": {
+          "heading": {
+            "type": "string",
+            "title": "Heading"
+          },
+          "posts": {
+            "items": {
+              "$ref": "#/components/schemas/BlogPostStub"
+            },
+            "type": "array",
+            "title": "Posts"
+          }
+        },
+        "type": "object",
+        "required": [
+          "heading"
+        ],
+        "title": "BlogSection"
+      },
+      "ErrorCode": {
+        "type": "string",
+        "enum": [
+          "github_not_found",
+          "github_rate_limit",
+          "validation_error",
+          "llm_error"
+        ],
+        "title": "ErrorCode"
+      },
+      "ErrorResponse": {
+        "properties": {
+          "error_code": {
+            "$ref": "#/components/schemas/ErrorCode"
+          },
+          "detail": {
+            "type": "string",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "required": [
+          "error_code",
+          "detail"
+        ],
+        "title": "ErrorResponse"
+      },
+      "GenerateRequest": {
+        "properties": {
+          "profile": {
+            "$ref": "#/components/schemas/GitHubProfile"
+          },
+          "site_title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site Title"
+          },
+          "site_type": {
+            "$ref": "#/components/schemas/SiteType",
+            "default": "portfolio"
+          },
+          "theme": {
+            "$ref": "#/components/schemas/Theme",
+            "default": "minimal"
+          },
+          "tone": {
+            "$ref": "#/components/schemas/Tone",
+            "default": "professional"
+          },
+          "instructions": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Instructions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "profile"
+        ],
+        "title": "GenerateRequest"
+      },
+      "GeneratedSite": {
+        "properties": {
+          "hero": {
+            "$ref": "#/components/schemas/Hero"
+          },
+          "about": {
+            "$ref": "#/components/schemas/About"
+          },
+          "projects": {
+            "items": {
+              "$ref": "#/components/schemas/ProjectCard"
+            },
+            "type": "array",
+            "title": "Projects"
+          },
+          "blog": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BlogSection"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "hero",
+          "about"
+        ],
+        "title": "GeneratedSite"
+      },
+      "GitHubProfile": {
+        "properties": {
+          "username": {
+            "type": "string",
+            "title": "Username"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "avatar_url": {
+            "type": "string",
+            "title": "Avatar Url"
+          },
+          "bio": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bio"
+          },
+          "location": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location"
+          },
+          "blog": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Blog"
+          },
+          "public_repos": {
+            "type": "integer",
+            "title": "Public Repos",
+            "default": 0
+          },
+          "followers": {
+            "type": "integer",
+            "title": "Followers",
+            "default": 0
+          },
+          "top_repos": {
+            "items": {
+              "$ref": "#/components/schemas/RepoInfo"
+            },
+            "type": "array",
+            "title": "Top Repos"
+          },
+          "languages": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Languages"
+          },
+          "profile_readme": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Profile Readme"
+          }
+        },
+        "type": "object",
+        "required": [
+          "username",
+          "avatar_url"
+        ],
+        "title": "GitHubProfile"
+      },
       "HealthResponse": {
         "properties": {
           "status": {
@@ -57,18 +406,143 @@
         ],
         "title": "HealthResponse"
       },
-      "MessageResponse": {
+      "Hero": {
         "properties": {
-          "message": {
+          "headline": {
             "type": "string",
-            "title": "Message"
+            "title": "Headline"
+          },
+          "subheadline": {
+            "type": "string",
+            "title": "Subheadline"
           }
         },
         "type": "object",
         "required": [
-          "message"
+          "headline",
+          "subheadline"
         ],
-        "title": "MessageResponse"
+        "title": "Hero"
+      },
+      "IngestRequest": {
+        "properties": {
+          "github_url": {
+            "type": "string",
+            "title": "Github Url"
+          }
+        },
+        "type": "object",
+        "required": [
+          "github_url"
+        ],
+        "title": "IngestRequest"
+      },
+      "ProjectCard": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "url": {
+            "type": "string",
+            "title": "Url"
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Tags"
+          }
+        },
+        "type": "object",
+        "required": [
+          "title",
+          "description",
+          "url"
+        ],
+        "title": "ProjectCard"
+      },
+      "RepoInfo": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "url": {
+            "type": "string",
+            "title": "Url"
+          },
+          "stars": {
+            "type": "integer",
+            "title": "Stars",
+            "default": 0
+          },
+          "language": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Language"
+          },
+          "is_fork": {
+            "type": "boolean",
+            "title": "Is Fork",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "url"
+        ],
+        "title": "RepoInfo"
+      },
+      "SiteType": {
+        "type": "string",
+        "enum": [
+          "portfolio",
+          "blog",
+          "both"
+        ],
+        "title": "SiteType"
+      },
+      "Theme": {
+        "type": "string",
+        "enum": [
+          "minimal",
+          "terminal",
+          "editorial"
+        ],
+        "title": "Theme"
+      },
+      "Tone": {
+        "type": "string",
+        "enum": [
+          "professional",
+          "playful",
+          "minimal"
+        ],
+        "title": "Tone"
       }
     }
   }
