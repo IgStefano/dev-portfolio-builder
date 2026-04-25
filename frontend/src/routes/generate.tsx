@@ -11,6 +11,7 @@ type GenerateSearch = {
   siteTitle?: string
   siteType: SiteType
   theme: Theme
+  tone?: string
 }
 
 export const Route = createFileRoute('/generate')({
@@ -20,12 +21,13 @@ export const Route = createFileRoute('/generate')({
     siteTitle: search.siteTitle as string | undefined,
     siteType: (search.siteType as SiteType) ?? 'portfolio',
     theme: (search.theme as Theme) ?? 'minimal',
+    tone: (search.tone as string) ?? 'professional',
   }),
 })
 
 function GeneratePage() {
   const navigate = useNavigate()
-  const { profile: profileJson, siteTitle, siteType, theme } = Route.useSearch()
+  const { profile: profileJson, siteTitle, siteType, theme, tone } = Route.useSearch()
 
   let profile: GitHubProfile | null = null
   try {
@@ -48,7 +50,14 @@ function GeneratePage() {
       onSuccess: (site) => {
         navigate({
           to: '/preview',
-          search: { site: JSON.stringify(site), theme },
+          search: {
+            site: JSON.stringify(site),
+            theme,
+            tone: tone ?? 'professional',
+            profile: profileJson,
+            siteTitle,
+            siteType,
+          },
         })
       },
     },
@@ -62,7 +71,7 @@ function GeneratePage() {
           site_title: siteTitle,
           site_type: siteType,
           theme,
-          tone: 'professional',
+          tone: (tone as 'professional' | 'playful' | 'minimal') ?? 'professional',
         },
       })
     }
@@ -167,7 +176,7 @@ function GeneratePage() {
                       site_title: siteTitle,
                       site_type: siteType,
                       theme,
-                      tone: 'professional',
+                      tone: (tone as 'professional' | 'playful' | 'minimal') ?? 'professional',
                     },
                   })}
                 >
