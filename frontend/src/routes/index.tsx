@@ -1,9 +1,10 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useHealthApiHealthGet, useIngestApiIngestPost } from '../api/generated'
 import type { SiteType, Theme } from '../api/generated'
+import { ApiRequestError } from '../api/client'
 
-const GITHUB_URL_RE = /^(https?:\/\/)?(www\.)?github\.com\/[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?(\/.*)?$/
+const GITHUB_URL_RE = /^(@[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?|(https?:\/\/)?(www\.)?github\.com\/[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?(\/[^\s]*)?)$/
 
 export const Route = createFileRoute('/')({
   component: HomePage,
@@ -18,9 +19,17 @@ function HomePage() {
   const [siteType, setSiteType] = useState<SiteType>('portfolio')
   const [theme, setTheme] = useState<Theme>('minimal')
   const [urlTouched, setUrlTouched] = useState(false)
+  const [toast, setToast] = useState<string | null>(null)
 
   const urlValid = GITHUB_URL_RE.test(githubUrl)
   const showUrlError = urlTouched && githubUrl.length > 0 && !urlValid
+
+  // Auto-dismiss toast after 5s
+  useEffect(() => {
+    if (!toast) return
+    const timer = setTimeout(() => setToast(null), 5000)
+    return () => clearTimeout(timer)
+  }, [toast])
 
   const ingest = useIngestApiIngestPost({
     mutation: {
@@ -35,6 +44,11 @@ function HomePage() {
           },
         })
       },
+      onError: (error) => {
+        if (error instanceof ApiRequestError && error.error_code === 'github_rate_limit') {
+          setToast('GitHub API rate limit reached. Please wait a minute and try again.')
+        }
+      },
     },
   })
 
@@ -43,6 +57,20 @@ function HomePage() {
     if (!urlValid) return
     ingest.mutate({ data: { github_url: githubUrl } })
   }
+
+  const ingestErrorMessage = (() => {
+    if (!ingest.isError) return null
+    const err = ingest.error
+    if (err instanceof ApiRequestError) {
+      if (err.error_code === 'github_not_found') {
+        return 'GitHub user not found. Please check the username and try again.'
+      }
+      if (err.error_code === 'github_rate_limit') {
+        return null // handled by toast
+      }
+    }
+    return 'Something went wrong. Please check the URL and try again.'
+  })()
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center px-4">
@@ -76,7 +104,7 @@ function HomePage() {
               onChange={(e) => setGithubUrl(e.target.value)}
               onBlur={() => setUrlTouched(true)}
               className={`mt-1.5 block w-full rounded-lg border bg-gray-900 px-4 py-2.5 text-white placeholder-gray-500 focus:outline-none focus:ring-2 ${
-                showUrlError
+                showUrlError || (ingest.isError && ingestErrorMessage)
                   ? 'border-red-500 focus:ring-red-500'
                   : 'border-gray-700 focus:ring-blue-500'
               }`}
@@ -84,6 +112,11 @@ function HomePage() {
             {showUrlError && (
               <p className="mt-1.5 text-sm text-red-400">
                 Please enter a valid GitHub URL (e.g. https://github.com/username)
+              </p>
+            )}
+            {ingestErrorMessage && (
+              <p className="mt-1.5 text-sm text-red-400">
+                {ingestErrorMessage}
               </p>
             )}
           </div>
@@ -157,14 +190,23 @@ function HomePage() {
           >
             {ingest.isPending ? 'Ingesting...' : 'Generate Portfolio'}
           </button>
-
-          {ingest.isError && (
-            <p className="text-center text-sm text-red-400">
-              Something went wrong. Please check the URL and try again.
-            </p>
-          )}
         </form>
       </div>
+
+      {/* Toast */}
+      {toast && (
+        <div className="fixed bottom-6 right-6 z-50 max-w-sm rounded-lg border border-yellow-600/30 bg-yellow-900/80 px-4 py-3 text-sm text-yellow-200 shadow-lg backdrop-blur">
+          <div className="flex items-start gap-2">
+            <span className="flex-1">{toast}</span>
+            <button
+              onClick={() => setToast(null)}
+              className="text-yellow-300 hover:text-yellow-100"
+            >
+              &times;
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
