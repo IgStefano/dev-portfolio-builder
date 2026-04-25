@@ -4,6 +4,7 @@ import {
   useGenerateApiGeneratePost,
 } from '../api/generated'
 import type { GeneratedSite, GitHubProfile, SiteType, Theme, Tone } from '../api/generated'
+import { Theme as ThemeEnum } from '../api/generated'
 import type { PreviewPayload } from '../lib/previewChannel'
 import { usePreviewSender } from '../lib/previewChannel'
 import { ApiRequestError } from '../api/client'
@@ -52,6 +53,12 @@ const VIEWPORT_ICONS: Record<ViewportPreset, typeof MonitorIcon> = {
 
 const SESSION_KEY = 'dpb:draft'
 
+const THEME_META: Record<Theme, { label: string; description: string }> = {
+  minimal: { label: 'Minimal', description: 'Clean & modern' },
+  terminal: { label: 'Terminal', description: 'Hacker vibes' },
+  editorial: { label: 'Editorial', description: 'Writer-developer' },
+}
+
 type PreviewSearch = {
   site: string
   theme: Theme
@@ -74,12 +81,11 @@ export const Route = createFileRoute('/preview')({
 
 function PreviewPage() {
   const navigate = useNavigate()
-  const { site: siteJson, theme: searchTheme } = Route.useSearch()
-  const [viewport, setViewport] = useState<ViewportPreset>('desktop')
+  const { site: siteJson, theme: initialTheme } = Route.useSearch()
 
-  // Mutable state for the current site (updated on tweaks/regeneration)
+  const [activeTheme, setActiveTheme] = useState<Theme>(initialTheme)
+  const [viewport, setViewport] = useState<ViewportPreset>('desktop')
   const [currentSite, setCurrentSite] = useState<GeneratedSite | null>(null)
-  const [currentTheme, setCurrentTheme] = useState<Theme>(searchTheme)
   const [currentTone, setCurrentTone] = useState<Tone>(() => {
     const stored = sessionStorage.getItem('dpb:preferences')
     if (stored) {
@@ -120,7 +126,6 @@ function PreviewPage() {
     return null
   }, [])
 
-  // Initialize site from search params or sessionStorage
   const site: GeneratedSite | null = useMemo(() => {
     if (currentSite) return currentSite
 
@@ -130,7 +135,7 @@ function PreviewPage() {
         sessionStorage.setItem(SESSION_KEY, siteJson)
         return parsed
       } catch {
-        // fall through
+        // fall through to sessionStorage
       }
     }
     const stored = sessionStorage.getItem(SESSION_KEY)
@@ -138,18 +143,22 @@ function PreviewPage() {
       try {
         return JSON.parse(stored) as GeneratedSite
       } catch {
-        // invalid
+        // invalid stored data
       }
     }
     return null
   }, [siteJson, currentSite])
 
   const payload: PreviewPayload | null = useMemo(
-    () => (site ? { site, theme: currentTheme } : null),
-    [site, currentTheme],
+    () => (site ? { site, theme: activeTheme } : null),
+    [site, activeTheme],
   )
 
   const { iframeRef, onIframeLoad } = usePreviewSender(payload)
+
+  const handleThemeChange = useCallback((theme: Theme) => {
+    setActiveTheme(theme)
+  }, [])
 
   // Auto-dismiss toast after 6s
   useEffect(() => {
@@ -175,7 +184,7 @@ function PreviewPage() {
             profile,
             site_title: preferences?.siteTitle,
             site_type: preferences?.siteType ?? 'portfolio',
-            theme: currentTheme,
+            theme: activeTheme,
             tone,
             instructions: instructions || undefined,
           },
@@ -204,7 +213,7 @@ function PreviewPage() {
         },
       )
     },
-    [profile, preferences, currentTheme, currentTone, generate],
+    [profile, preferences, activeTheme, currentTone, generate],
   )
 
   useEffect(() => {
@@ -241,31 +250,135 @@ function PreviewPage() {
   }
 
   return (
-    <div className="min-h-screen px-4 py-8">
-      <div className="mx-auto max-w-6xl space-y-6">
-        {/* Header bar */}
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-medium uppercase tracking-wider text-gray-500">
-            Preview
-          </h2>
-          <button
-            onClick={() => navigate({ to: '/' })}
-            className="rounded-lg border border-gray-700 px-3 py-1.5 text-xs text-gray-400 hover:border-gray-500"
-          >
-            Start Over
-          </button>
-        </div>
+    <div className="flex min-h-screen">
+      {/* Side panel */}
+      <aside className="w-64 shrink-0 border-r border-gray-800 bg-gray-950 p-5">
+        <div className="space-y-6">
+          <div>
+            <button
+              onClick={() => navigate({ to: '/' })}
+              className="rounded-lg border border-gray-700 px-3 py-1.5 text-xs text-gray-400 hover:border-gray-500 w-full"
+            >
+              Start Over
+            </button>
+          </div>
 
-        <div className="flex gap-6">
+          {/* Theme chips */}
+          <div>
+            <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-500">
+              Theme
+            </h3>
+            <div className="space-y-2">
+              {Object.values(ThemeEnum).map((t) => (
+                <button
+                  key={t}
+                  onClick={() => handleThemeChange(t)}
+                  className={`w-full rounded-lg border px-3 py-2.5 text-left transition-colors ${
+                    activeTheme === t
+                      ? 'border-blue-500 bg-blue-500/10'
+                      : 'border-gray-800 hover:border-gray-600'
+                  }`}
+                >
+                  <span
+                    className={`block text-sm font-medium ${
+                      activeTheme === t ? 'text-blue-400' : 'text-gray-300'
+                    }`}
+                  >
+                    {THEME_META[t].label}
+                  </span>
+                  <span className="block text-xs text-gray-500">
+                    {THEME_META[t].description}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Tone chips */}
+          <div>
+            <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-500">
+              Tone
+            </h3>
+            <div className="space-y-2">
+              {(['professional', 'playful', 'minimal'] as const).map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => {
+                    setCurrentTone(t)
+                    handleGenerate({ toneOverride: t })
+                  }}
+                  disabled={generate.isPending}
+                  className={`w-full rounded-lg border px-3 py-2.5 text-left text-sm font-medium capitalize transition-colors disabled:opacity-50 ${
+                    currentTone === t
+                      ? 'border-blue-500 bg-blue-500/10 text-blue-400'
+                      : 'border-gray-800 text-gray-300 hover:border-gray-600'
+                  }`}
+                >
+                  {t}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Regenerate */}
+          <button
+            type="button"
+            onClick={() => handleGenerate()}
+            disabled={generate.isPending}
+            className="w-full rounded-lg border border-gray-700 px-4 py-2 text-sm font-medium text-gray-300 transition-colors hover:border-gray-500 disabled:opacity-50"
+          >
+            {generate.isPending ? 'Generating...' : 'Regenerate'}
+          </button>
+
+          {/* Free-form tweak input */}
+          <div>
+            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-500">
+              Tweak Instructions
+            </h3>
+            <textarea
+              id="tweak-input"
+              rows={3}
+              placeholder={'e.g. "mention I\'m based in Berlin" or "lean harder into my Rust work"'}
+              value={tweakText}
+              onChange={(e) => setTweakText(e.target.value)}
+              onKeyDown={handleTweakKeyDown}
+              disabled={generate.isPending}
+              className="block w-full resize-none rounded-lg border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+            />
+            <button
+              type="button"
+              onClick={handleTweakSubmit}
+              disabled={generate.isPending || !tweakText.trim()}
+              className="mt-2 w-full rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {generate.isPending ? 'Applying...' : 'Apply Tweak'}
+            </button>
+          </div>
+        </div>
+      </aside>
+
+      {/* Main content */}
+      <div className="flex-1 px-6 py-8">
+        <div className="mx-auto max-w-5xl space-y-6">
+          {/* Header bar */}
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-medium uppercase tracking-wider text-gray-500">
+              Preview
+            </h2>
+          </div>
+
           {/* Browser frame */}
-          <div className="flex-1 overflow-hidden rounded-xl border border-gray-800 bg-gray-900">
+          <div className="overflow-hidden rounded-xl border border-gray-800 bg-gray-900">
             {/* Title bar */}
             <div className="flex items-center gap-3 border-b border-gray-800 bg-gray-900 px-4 py-3">
+              {/* Traffic-light dots */}
               <div className="flex gap-1.5">
                 <span className="block h-3 w-3 rounded-full bg-red-500/80" />
                 <span className="block h-3 w-3 rounded-full bg-yellow-500/80" />
                 <span className="block h-3 w-3 rounded-full bg-green-500/80" />
               </div>
+              {/* URL bar */}
               <div className="flex-1 rounded-md bg-gray-800 px-3 py-1.5 text-xs text-gray-500 select-none">
                 {site.hero.headline
                   ? `${site.hero.headline.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-$/, '')}.dev`
@@ -304,97 +417,6 @@ function PreviewPage() {
                 className="h-[600px] border-0 bg-white transition-[width] duration-300 ease-in-out"
                 style={{ width: VIEWPORT_WIDTHS[viewport].width }}
               />
-            </div>
-          </div>
-
-          {/* Side panel */}
-          <div className="w-72 shrink-0 space-y-6">
-            {/* Theme chips */}
-            <div>
-              <label className="block text-xs font-medium uppercase tracking-wider text-gray-500">
-                Theme
-              </label>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {(['minimal', 'terminal', 'editorial'] as const).map((t) => (
-                  <button
-                    key={t}
-                    type="button"
-                    onClick={() => setCurrentTheme(t)}
-                    className={`rounded-lg border px-3 py-1.5 text-xs font-medium capitalize transition-colors ${
-                      currentTheme === t
-                        ? 'border-blue-500 bg-blue-500/10 text-blue-400'
-                        : 'border-gray-700 text-gray-400 hover:border-gray-500'
-                    }`}
-                  >
-                    {t}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Tone chips */}
-            <div>
-              <label className="block text-xs font-medium uppercase tracking-wider text-gray-500">
-                Tone
-              </label>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {(['professional', 'playful', 'minimal'] as const).map((t) => (
-                  <button
-                    key={t}
-                    type="button"
-                    onClick={() => {
-                      setCurrentTone(t)
-                      handleGenerate({ toneOverride: t })
-                    }}
-                    disabled={generate.isPending}
-                    className={`rounded-lg border px-3 py-1.5 text-xs font-medium capitalize transition-colors disabled:opacity-50 ${
-                      currentTone === t
-                        ? 'border-blue-500 bg-blue-500/10 text-blue-400'
-                        : 'border-gray-700 text-gray-400 hover:border-gray-500'
-                    }`}
-                  >
-                    {t}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Regenerate */}
-            <button
-              type="button"
-              onClick={() => handleGenerate()}
-              disabled={generate.isPending}
-              className="w-full rounded-lg border border-gray-700 px-4 py-2 text-sm font-medium text-gray-300 transition-colors hover:border-gray-500 disabled:opacity-50"
-            >
-              {generate.isPending ? 'Generating...' : 'Regenerate'}
-            </button>
-
-            {/* Free-form tweak input */}
-            <div>
-              <label
-                htmlFor="tweak-input"
-                className="block text-xs font-medium uppercase tracking-wider text-gray-500"
-              >
-                Tweak Instructions
-              </label>
-              <textarea
-                id="tweak-input"
-                rows={3}
-                placeholder={'e.g. "mention I\'m based in Berlin" or "lean harder into my Rust work"'}
-                value={tweakText}
-                onChange={(e) => setTweakText(e.target.value)}
-                onKeyDown={handleTweakKeyDown}
-                disabled={generate.isPending}
-                className="mt-2 block w-full resize-none rounded-lg border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
-              />
-              <button
-                type="button"
-                onClick={handleTweakSubmit}
-                disabled={generate.isPending || !tweakText.trim()}
-                className="mt-2 w-full rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {generate.isPending ? 'Applying...' : 'Apply Tweak'}
-              </button>
             </div>
           </div>
         </div>

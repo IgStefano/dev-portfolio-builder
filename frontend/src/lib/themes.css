@@ -1,0 +1,48 @@
+/* Theme CSS variables — applied via data-theme on the render root */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&display=swap');
+
+/* ── Minimal ─────────────────────────────────────────────────── */
+[data-theme="minimal"] {
+  --bg: #ffffff;
+  --bg-muted: #f9fafb;
+  --fg: #111827;
+  --fg-muted: #6b7280;
+  --accent: #2563eb;
+  --border: #e5e7eb;
+  --font-heading: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-body: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --space-section: 3rem;
+  --space-inner: 1.5rem;
+  --radius: 0.5rem;
+}
+
+/* ── Terminal ────────────────────────────────────────────────── */
+[data-theme="terminal"] {
+  --bg: #0a0a0a;
+  --bg-muted: #141414;
+  --fg: #e0e0e0;
+  --fg-muted: #777777;
+  --accent: #00ff88;
+  --border: #2a2a2a;
+  --font-heading: 'JetBrains Mono', ui-monospace, monospace;
+  --font-body: 'JetBrains Mono', ui-monospace, monospace;
+  --space-section: 2.5rem;
+  --space-inner: 1.25rem;
+  --radius: 0;
+}
+
+/* ── Editorial ───────────────────────────────────────────────── */
+[data-theme="editorial"] {
+  --bg: #faf8f5;
+  --bg-muted: #f0ece6;
+  --fg: #1a1a1a;
+  --fg-muted: #6b6560;
+  --accent: #c2410c;
+  --border: #d6d0c8;
+  --font-heading: 'Fraunces', ui-serif, Georgia, serif;
+  --font-body: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --space-section: 3.5rem;
+  --space-inner: 1.75rem;
+  --radius: 0.25rem;
+}
