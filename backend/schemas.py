@@ -112,6 +112,7 @@ class GenerateRequest(BaseModel):
 
 class HealthResponse(BaseModel):
     status: str
+    anthropic_key_present: bool = False
 
 
 class ErrorResponse(BaseModel):

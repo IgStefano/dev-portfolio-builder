@@ -103,6 +103,7 @@ export interface GitHubProfile {
 
 export interface HealthResponse {
   status: string;
+  anthropic_key_present?: boolean;
 }
 
 export interface Hero {
@@ -257,7 +258,7 @@ export function useHealthApiHealthGet<TData = Awaited<ReturnType<typeof healthAp
 
 
 /**
- * Accept a GitHub URL and return a structured profile (stub).
+ * Accept a GitHub URL and return a structured profile.
  * @summary Ingest
  */
 export const ingestApiIngestPost = (

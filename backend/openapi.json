@@ -26,7 +26,7 @@
     "/api/ingest": {
       "post": {
         "summary": "Ingest",
-        "description": "Accept a GitHub URL and return a structured profile (stub).",
+        "description": "Accept a GitHub URL and return a structured profile.",
         "operationId": "ingest_api_ingest_post",
         "requestBody": {
           "content": {
@@ -398,6 +398,11 @@
           "status": {
             "type": "string",
             "title": "Status"
+          },
+          "anthropic_key_present": {
+            "type": "boolean",
+            "title": "Anthropic Key Present",
+            "default": false
           }
         },
         "type": "object",
