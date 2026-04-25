@@ -8,6 +8,8 @@ import { Theme as ThemeEnum } from '../api/generated'
 import type { PreviewPayload } from '../lib/previewChannel'
 import { usePreviewSender } from '../lib/previewChannel'
 import { ApiRequestError } from '../api/client'
+import { Button } from '../components/ui/button'
+import { Textarea } from '../components/ui/textarea'
 
 type ViewportPreset = 'desktop' | 'tablet' | 'mobile'
 
@@ -233,17 +235,15 @@ function PreviewPage() {
     }
   }
 
+  // Redirect to home if no draft available
   if (!site) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="text-center space-y-4">
-          <p className="text-lg text-red-400">No site data available.</p>
-          <button
-            onClick={() => navigate({ to: '/' })}
-            className="rounded-lg border border-gray-700 px-4 py-2 text-sm text-gray-300 hover:border-gray-500"
-          >
-            Start Over
-          </button>
+          <p className="text-lg text-gray-400">No site draft found. Start by entering your GitHub profile.</p>
+          <Button variant="outline" onClick={() => navigate({ to: '/' })}>
+            Go to Home
+          </Button>
         </div>
       </div>
     )
@@ -255,12 +255,14 @@ function PreviewPage() {
       <aside className="w-64 shrink-0 border-r border-gray-800 bg-gray-950 p-5">
         <div className="space-y-6">
           <div>
-            <button
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => navigate({ to: '/' })}
-              className="rounded-lg border border-gray-700 px-3 py-1.5 text-xs text-gray-400 hover:border-gray-500 w-full"
+              className="w-full"
             >
               Start Over
-            </button>
+            </Button>
           </div>
 
           {/* Theme chips */}
@@ -322,21 +324,21 @@ function PreviewPage() {
           </div>
 
           {/* Regenerate */}
-          <button
-            type="button"
+          <Button
+            variant="outline"
             onClick={() => handleGenerate()}
             disabled={generate.isPending}
-            className="w-full rounded-lg border border-gray-700 px-4 py-2 text-sm font-medium text-gray-300 transition-colors hover:border-gray-500 disabled:opacity-50"
+            className="w-full"
           >
             {generate.isPending ? 'Generating...' : 'Regenerate'}
-          </button>
+          </Button>
 
           {/* Free-form tweak input */}
           <div>
             <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-500">
               Tweak Instructions
             </h3>
-            <textarea
+            <Textarea
               id="tweak-input"
               rows={3}
               placeholder={'e.g. "mention I\'m based in Berlin" or "lean harder into my Rust work"'}
@@ -344,16 +346,14 @@ function PreviewPage() {
               onChange={(e) => setTweakText(e.target.value)}
               onKeyDown={handleTweakKeyDown}
               disabled={generate.isPending}
-              className="block w-full resize-none rounded-lg border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
             />
-            <button
-              type="button"
+            <Button
               onClick={handleTweakSubmit}
               disabled={generate.isPending || !tweakText.trim()}
-              className="mt-2 w-full rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
+              className="mt-2 w-full"
             >
               {generate.isPending ? 'Applying...' : 'Apply Tweak'}
-            </button>
+            </Button>
           </div>
         </div>
       </aside>

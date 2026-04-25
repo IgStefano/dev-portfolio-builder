@@ -1,3 +1,5 @@
+import os
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -32,7 +34,10 @@ app.add_middleware(
 
 @app.get("/api/health", response_model=HealthResponse)
 async def health() -> HealthResponse:
-    return HealthResponse(status="ok")
+    return HealthResponse(
+        status="ok",
+        anthropic_key_present=bool(os.environ.get("ANTHROPIC_API_KEY")),
+    )
 
 
 @app.post(

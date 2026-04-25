@@ -3,6 +3,10 @@ import { useEffect, useState } from 'react'
 import { useHealthApiHealthGet, useIngestApiIngestPost } from '../api/generated'
 import type { SiteType, Theme } from '../api/generated'
 import { ApiRequestError } from '../api/client'
+import { Button } from '../components/ui/button'
+import { Input } from '../components/ui/input'
+import { Label } from '../components/ui/label'
+import { ToggleGroup, ToggleGroupItem } from '../components/ui/toggle-group'
 
 const GITHUB_URL_RE = /^(@[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?|(https?:\/\/)?(www\.)?github\.com\/[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?(\/[^\s]*)?)$/
 
@@ -24,7 +28,6 @@ function HomePage() {
   const urlValid = GITHUB_URL_RE.test(githubUrl)
   const showUrlError = urlTouched && githubUrl.length > 0 && !urlValid
 
-  // Auto-dismiss toast after 5s
   useEffect(() => {
     if (!toast) return
     const timer = setTimeout(() => setToast(null), 5000)
@@ -66,7 +69,7 @@ function HomePage() {
         return 'GitHub user not found. Please check the username and try again.'
       }
       if (err.error_code === 'github_rate_limit') {
-        return null // handled by toast
+        return null
       }
     }
     return 'Something went wrong. Please check the URL and try again.'
@@ -75,8 +78,9 @@ function HomePage() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center px-4">
       <div className="w-full max-w-lg space-y-8">
+        {/* Hero */}
         <div className="text-center">
-          <h1 className="text-4xl font-bold tracking-tight text-white sm:text-5xl">
+          <h1 className="font-serif text-4xl font-bold tracking-tight text-white sm:text-5xl">
             Dev Portfolio Builder
           </h1>
           <p className="mt-4 text-lg text-gray-400">
@@ -84,112 +88,101 @@ function HomePage() {
           </p>
         </div>
 
-        {health && health.status === 'ok' && (
-          <div className="rounded-lg border border-gray-800 bg-gray-900 px-4 py-3 text-center text-sm text-gray-400">
-            API connected
+        {/* Health banner */}
+        {health && health.anthropic_key_present === false && (
+          <div className="rounded-lg border border-yellow-600/30 bg-yellow-900/20 px-4 py-3 text-center text-sm text-yellow-300">
+            Demo mode: LLM not configured. Set <code className="rounded bg-yellow-900/40 px-1.5 py-0.5 font-mono text-xs">ANTHROPIC_API_KEY</code> to enable real generation.
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* GitHub URL */}
-          <div>
-            <label htmlFor="github-url" className="block text-sm font-medium text-gray-300">
+          <div className="space-y-1.5">
+            <Label htmlFor="github-url">
               GitHub Profile URL <span className="text-red-400">*</span>
-            </label>
-            <input
+            </Label>
+            <Input
               id="github-url"
               type="url"
               placeholder="https://github.com/username"
               value={githubUrl}
               onChange={(e) => setGithubUrl(e.target.value)}
               onBlur={() => setUrlTouched(true)}
-              className={`mt-1.5 block w-full rounded-lg border bg-gray-900 px-4 py-2.5 text-white placeholder-gray-500 focus:outline-none focus:ring-2 ${
+              className={
                 showUrlError || (ingest.isError && ingestErrorMessage)
-                  ? 'border-red-500 focus:ring-red-500'
-                  : 'border-gray-700 focus:ring-blue-500'
-              }`}
+                  ? 'border-red-500 focus-visible:ring-red-500'
+                  : undefined
+              }
             />
             {showUrlError && (
-              <p className="mt-1.5 text-sm text-red-400">
+              <p className="text-sm text-red-400">
                 Please enter a valid GitHub URL (e.g. https://github.com/username)
               </p>
             )}
             {ingestErrorMessage && (
-              <p className="mt-1.5 text-sm text-red-400">
-                {ingestErrorMessage}
-              </p>
+              <p className="text-sm text-red-400">{ingestErrorMessage}</p>
             )}
           </div>
 
           {/* Site Title */}
-          <div>
-            <label htmlFor="site-title" className="block text-sm font-medium text-gray-300">
+          <div className="space-y-1.5">
+            <Label htmlFor="site-title">
               Site Title <span className="text-gray-600">(optional)</span>
-            </label>
-            <input
+            </Label>
+            <Input
               id="site-title"
               type="text"
               placeholder="e.g. Jane Doe — Developer"
               value={siteTitle}
               onChange={(e) => setSiteTitle(e.target.value)}
-              className="mt-1.5 block w-full rounded-lg border border-gray-700 bg-gray-900 px-4 py-2.5 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
 
           {/* Site Type */}
-          <div>
-            <label className="block text-sm font-medium text-gray-300">
+          <div className="space-y-1.5">
+            <Label>
               Site Type <span className="text-red-400">*</span>
-            </label>
-            <div className="mt-2 flex gap-3">
+            </Label>
+            <ToggleGroup
+              type="single"
+              value={siteType}
+              onValueChange={(v) => { if (v) setSiteType(v as SiteType) }}
+            >
               {(['portfolio', 'blog', 'both'] as const).map((t) => (
-                <button
-                  key={t}
-                  type="button"
-                  onClick={() => setSiteType(t)}
-                  className={`flex-1 rounded-lg border px-4 py-2 text-sm font-medium capitalize transition-colors ${
-                    siteType === t
-                      ? 'border-blue-500 bg-blue-500/10 text-blue-400'
-                      : 'border-gray-700 text-gray-400 hover:border-gray-500'
-                  }`}
-                >
+                <ToggleGroupItem key={t} value={t}>
                   {t}
-                </button>
+                </ToggleGroupItem>
               ))}
-            </div>
+            </ToggleGroup>
           </div>
 
           {/* Theme */}
-          <div>
-            <label className="block text-sm font-medium text-gray-300">
+          <div className="space-y-1.5">
+            <Label>
               Theme <span className="text-red-400">*</span>
-            </label>
-            <div className="mt-2 flex gap-3">
+            </Label>
+            <ToggleGroup
+              type="single"
+              value={theme}
+              onValueChange={(v) => { if (v) setTheme(v as Theme) }}
+            >
               {(['minimal', 'terminal', 'editorial'] as const).map((t) => (
-                <button
-                  key={t}
-                  type="button"
-                  onClick={() => setTheme(t)}
-                  className={`flex-1 rounded-lg border px-4 py-2 text-sm font-medium capitalize transition-colors ${
-                    theme === t
-                      ? 'border-blue-500 bg-blue-500/10 text-blue-400'
-                      : 'border-gray-700 text-gray-400 hover:border-gray-500'
-                  }`}
-                >
+                <ToggleGroupItem key={t} value={t}>
                   {t}
-                </button>
+                </ToggleGroupItem>
               ))}
-            </div>
+            </ToggleGroup>
           </div>
 
           {/* Submit */}
-          <button
+          <Button
             type="submit"
             disabled={!urlValid || ingest.isPending}
-            className="w-full rounded-lg bg-blue-600 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
+            className="w-full"
+            size="lg"
           >
             {ingest.isPending ? 'Ingesting...' : 'Generate Portfolio'}
-          </button>
+          </Button>
         </form>
       </div>
 
