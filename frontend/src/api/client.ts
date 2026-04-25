@@ -1,5 +1,19 @@
 const BASE_URL = ''
 
+export class ApiError extends Error {
+  status: number
+  errorCode: string | null
+  detail: string | null
+
+  constructor(status: number, errorCode: string | null, detail: string | null) {
+    super(detail ?? `HTTP ${status}`)
+    this.name = 'ApiError'
+    this.status = status
+    this.errorCode = errorCode
+    this.detail = detail
+  }
+}
+
 export const customInstance = async <T>({
   url,
   method,
@@ -28,7 +42,16 @@ export const customInstance = async <T>({
   })
 
   if (!response.ok) {
-    throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+    let errorCode: string | null = null
+    let detail: string | null = null
+    try {
+      const body = await response.json()
+      errorCode = body?.error_code ?? null
+      detail = body?.detail ?? null
+    } catch {
+      // response body was not JSON
+    }
+    throw new ApiError(response.status, errorCode, detail)
   }
 
   return response.json() as Promise<T>
