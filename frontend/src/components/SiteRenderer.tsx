@@ -101,6 +101,7 @@ function Divider() {
 
 const rootStyle: React.CSSProperties = {
   minHeight: '100vh',
+  overflowX: 'hidden',
   background: 'var(--bg)',
   color: 'var(--fg)',
   fontFamily: 'var(--font-body)',
