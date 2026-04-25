@@ -5,120 +5,164 @@
  * OpenAPI spec version: 0.1.0
  */
 import {
+  useMutation,
   useQuery
 } from '@tanstack/react-query';
 import type {
   DataTag,
   DefinedInitialDataOptions,
   DefinedUseQueryResult,
+  MutationFunction,
   QueryClient,
   QueryFunction,
   QueryKey,
   UndefinedInitialDataOptions,
+  UseMutationOptions,
+  UseMutationResult,
   UseQueryOptions,
   UseQueryResult
 } from '@tanstack/react-query';
 
 import { customInstance } from './client';
+export interface About {
+  text: string;
+}
+
+export interface BlogPostStub {
+  title: string;
+  summary: string;
+  date: string;
+}
+
+export interface BlogSection {
+  heading: string;
+  posts?: BlogPostStub[];
+}
+
+export type ErrorCode = typeof ErrorCode[keyof typeof ErrorCode];
+
+
+// eslint-disable-next-line @typescript-eslint/no-redeclare
+export const ErrorCode = {
+  github_not_found: 'github_not_found',
+  github_rate_limit: 'github_rate_limit',
+  validation_error: 'validation_error',
+  llm_error: 'llm_error',
+} as const;
+
+export interface ErrorResponse {
+  error_code: ErrorCode;
+  detail: string;
+}
+
+export type GenerateRequestSiteTitle = string | null;
+
+export type GenerateRequestInstructions = string | null;
+
+export interface GenerateRequest {
+  profile: GitHubProfile;
+  site_title?: GenerateRequestSiteTitle;
+  site_type?: SiteType;
+  theme?: Theme;
+  tone?: Tone;
+  instructions?: GenerateRequestInstructions;
+}
+
+export type GeneratedSiteBlog = BlogSection | null;
+
+export interface GeneratedSite {
+  hero: Hero;
+  about: About;
+  projects?: ProjectCard[];
+  blog?: GeneratedSiteBlog;
+}
+
+export type GitHubProfileName = string | null;
+
+export type GitHubProfileBio = string | null;
+
+export type GitHubProfileLocation = string | null;
+
+export type GitHubProfileBlog = string | null;
+
+export type GitHubProfileProfileReadme = string | null;
+
+export interface GitHubProfile {
+  username: string;
+  name?: GitHubProfileName;
+  avatar_url: string;
+  bio?: GitHubProfileBio;
+  location?: GitHubProfileLocation;
+  blog?: GitHubProfileBlog;
+  public_repos?: number;
+  followers?: number;
+  top_repos?: RepoInfo[];
+  languages?: string[];
+  profile_readme?: GitHubProfileProfileReadme;
+}
+
 export interface HealthResponse {
   status: string;
 }
 
-export interface MessageResponse {
-  message: string;
+export interface Hero {
+  headline: string;
+  subheadline: string;
 }
 
-/**
- * @summary Root
- */
-export const rootGet = (
-    
- signal?: AbortSignal
-) => {
-      
-      
-      return customInstance<MessageResponse>(
-      {url: `/`, method: 'GET', signal
-    },
-      );
-    }
-  
-
-
-
-export const getRootGetQueryKey = () => {
-    return [
-    `/`
-    ] as const;
-    }
-
-    
-export const getRootGetQueryOptions = <TData = Awaited<ReturnType<typeof rootGet>>, TError = unknown>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof rootGet>>, TError, TData>>, }
-) => {
-
-const {query: queryOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getRootGetQueryKey();
-
-  
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof rootGet>>> = ({ signal }) => rootGet(signal);
-
-      
-
-      
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof rootGet>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+export interface IngestRequest {
+  github_url: string;
 }
 
-export type RootGetQueryResult = NonNullable<Awaited<ReturnType<typeof rootGet>>>
-export type RootGetQueryError = unknown
-
-
-export function useRootGet<TData = Awaited<ReturnType<typeof rootGet>>, TError = unknown>(
-  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof rootGet>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof rootGet>>,
-          TError,
-          Awaited<ReturnType<typeof rootGet>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useRootGet<TData = Awaited<ReturnType<typeof rootGet>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof rootGet>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof rootGet>>,
-          TError,
-          Awaited<ReturnType<typeof rootGet>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useRootGet<TData = Awaited<ReturnType<typeof rootGet>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof rootGet>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-/**
- * @summary Root
- */
-
-export function useRootGet<TData = Awaited<ReturnType<typeof rootGet>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof rootGet>>, TError, TData>>, }
- , queryClient?: QueryClient 
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getRootGetQueryOptions(options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  query.queryKey = queryOptions.queryKey ;
-
-  return query;
+export interface ProjectCard {
+  title: string;
+  description: string;
+  url: string;
+  tags?: string[];
 }
 
+export type RepoInfoDescription = string | null;
+
+export type RepoInfoLanguage = string | null;
+
+export interface RepoInfo {
+  name: string;
+  description?: RepoInfoDescription;
+  url: string;
+  stars?: number;
+  language?: RepoInfoLanguage;
+  is_fork?: boolean;
+}
+
+export type SiteType = typeof SiteType[keyof typeof SiteType];
 
 
+// eslint-disable-next-line @typescript-eslint/no-redeclare
+export const SiteType = {
+  portfolio: 'portfolio',
+  blog: 'blog',
+  both: 'both',
+} as const;
+
+export type Theme = typeof Theme[keyof typeof Theme];
+
+
+// eslint-disable-next-line @typescript-eslint/no-redeclare
+export const Theme = {
+  minimal: 'minimal',
+  terminal: 'terminal',
+  editorial: 'editorial',
+} as const;
+
+export type Tone = typeof Tone[keyof typeof Tone];
+
+
+// eslint-disable-next-line @typescript-eslint/no-redeclare
+export const Tone = {
+  professional: 'professional',
+  playful: 'playful',
+  minimal: 'minimal',
+} as const;
 
 /**
  * @summary Health
@@ -208,3 +252,138 @@ export function useHealthApiHealthGet<TData = Awaited<ReturnType<typeof healthAp
 
   return query;
 }
+
+
+
+
+/**
+ * Accept a GitHub URL and return a structured profile (stub).
+ * @summary Ingest
+ */
+export const ingestApiIngestPost = (
+    ingestRequest: IngestRequest,
+ signal?: AbortSignal
+) => {
+      
+      
+      return customInstance<GitHubProfile>(
+      {url: `/api/ingest`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: ingestRequest, signal
+    },
+      );
+    }
+  
+
+
+export const getIngestApiIngestPostMutationOptions = <TError = ErrorResponse | ErrorResponse | ErrorResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof ingestApiIngestPost>>, TError,{data: IngestRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof ingestApiIngestPost>>, TError,{data: IngestRequest}, TContext> => {
+
+const mutationKey = ['ingestApiIngestPost'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof ingestApiIngestPost>>, {data: IngestRequest}> = (props) => {
+          const {data} = props ?? {};
+
+          return  ingestApiIngestPost(data,)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type IngestApiIngestPostMutationResult = NonNullable<Awaited<ReturnType<typeof ingestApiIngestPost>>>
+    export type IngestApiIngestPostMutationBody = IngestRequest
+    export type IngestApiIngestPostMutationError = ErrorResponse | ErrorResponse | ErrorResponse
+
+    /**
+ * @summary Ingest
+ */
+export const useIngestApiIngestPost = <TError = ErrorResponse | ErrorResponse | ErrorResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof ingestApiIngestPost>>, TError,{data: IngestRequest}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof ingestApiIngestPost>>,
+        TError,
+        {data: IngestRequest},
+        TContext
+      > => {
+
+      const mutationOptions = getIngestApiIngestPostMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    
+/**
+ * Accept a profile + preferences and return a generated site (stub).
+ * @summary Generate
+ */
+export const generateApiGeneratePost = (
+    generateRequest: GenerateRequest,
+ signal?: AbortSignal
+) => {
+      
+      
+      return customInstance<GeneratedSite>(
+      {url: `/api/generate`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: generateRequest, signal
+    },
+      );
+    }
+  
+
+
+export const getGenerateApiGeneratePostMutationOptions = <TError = ErrorResponse | ErrorResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof generateApiGeneratePost>>, TError,{data: GenerateRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof generateApiGeneratePost>>, TError,{data: GenerateRequest}, TContext> => {
+
+const mutationKey = ['generateApiGeneratePost'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof generateApiGeneratePost>>, {data: GenerateRequest}> = (props) => {
+          const {data} = props ?? {};
+
+          return  generateApiGeneratePost(data,)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type GenerateApiGeneratePostMutationResult = NonNullable<Awaited<ReturnType<typeof generateApiGeneratePost>>>
+    export type GenerateApiGeneratePostMutationBody = GenerateRequest
+    export type GenerateApiGeneratePostMutationError = ErrorResponse | ErrorResponse
+
+    /**
+ * @summary Generate
+ */
+export const useGenerateApiGeneratePost = <TError = ErrorResponse | ErrorResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof generateApiGeneratePost>>, TError,{data: GenerateRequest}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof generateApiGeneratePost>>,
+        TError,
+        {data: GenerateRequest},
+        TContext
+      > => {
+
+      const mutationOptions = getGenerateApiGeneratePostMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
