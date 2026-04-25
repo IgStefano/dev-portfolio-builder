@@ -1,9 +1,13 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { useCallback, useMemo, useState } from 'react'
-import type { GeneratedSite, Theme } from '../api/generated'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import {
+  useGenerateApiGeneratePost,
+} from '../api/generated'
+import type { GeneratedSite, GitHubProfile, SiteType, Theme, Tone } from '../api/generated'
 import { Theme as ThemeEnum } from '../api/generated'
 import type { PreviewPayload } from '../lib/previewChannel'
 import { usePreviewSender } from '../lib/previewChannel'
+import { ApiRequestError } from '../api/client'
 
 type ViewportPreset = 'desktop' | 'tablet' | 'mobile'
 
@@ -60,6 +64,13 @@ type PreviewSearch = {
   theme: Theme
 }
 
+type Preferences = {
+  siteTitle?: string
+  siteType: SiteType
+  theme: Theme
+  tone: Tone
+}
+
 export const Route = createFileRoute('/preview')({
   component: PreviewPage,
   validateSearch: (search: Record<string, unknown>): PreviewSearch => ({
@@ -74,8 +85,50 @@ function PreviewPage() {
 
   const [activeTheme, setActiveTheme] = useState<Theme>(initialTheme)
   const [viewport, setViewport] = useState<ViewportPreset>('desktop')
+  const [currentSite, setCurrentSite] = useState<GeneratedSite | null>(null)
+  const [currentTone, setCurrentTone] = useState<Tone>(() => {
+    const stored = sessionStorage.getItem('dpb:preferences')
+    if (stored) {
+      try {
+        const prefs = JSON.parse(stored) as Preferences
+        if (prefs.tone) return prefs.tone
+      } catch {
+        // ignore
+      }
+    }
+    return 'professional'
+  })
+  const [tweakText, setTweakText] = useState('')
+  const [toast, setToast] = useState<{ message: string; retry?: () => void } | null>(null)
+
+  // Load profile + preferences from sessionStorage
+  const profile: GitHubProfile | null = useMemo(() => {
+    const stored = sessionStorage.getItem('dpb:profile')
+    if (stored) {
+      try {
+        return JSON.parse(stored) as GitHubProfile
+      } catch {
+        return null
+      }
+    }
+    return null
+  }, [])
+
+  const preferences: Preferences | null = useMemo(() => {
+    const stored = sessionStorage.getItem('dpb:preferences')
+    if (stored) {
+      try {
+        return JSON.parse(stored) as Preferences
+      } catch {
+        return null
+      }
+    }
+    return null
+  }, [])
 
   const site: GeneratedSite | null = useMemo(() => {
+    if (currentSite) return currentSite
+
     if (siteJson) {
       try {
         const parsed = JSON.parse(siteJson) as GeneratedSite
@@ -94,7 +147,7 @@ function PreviewPage() {
       }
     }
     return null
-  }, [siteJson])
+  }, [siteJson, currentSite])
 
   const payload: PreviewPayload | null = useMemo(
     () => (site ? { site, theme: activeTheme } : null),
@@ -106,6 +159,79 @@ function PreviewPage() {
   const handleThemeChange = useCallback((theme: Theme) => {
     setActiveTheme(theme)
   }, [])
+
+  // Auto-dismiss toast after 6s
+  useEffect(() => {
+    if (!toast) return
+    const timer = setTimeout(() => setToast(null), 6000)
+    return () => clearTimeout(timer)
+  }, [toast])
+
+  const generate = useGenerateApiGeneratePost()
+
+  type GenerateOpts = { instructions?: string; toneOverride?: Tone }
+  const handleGenerateRef = useRef<(opts?: GenerateOpts) => void>(() => {})
+
+  const handleGenerate = useCallback(
+    (opts?: GenerateOpts) => {
+      if (!profile) return
+      const tone = opts?.toneOverride ?? currentTone
+      const instructions = opts?.instructions
+
+      generate.mutate(
+        {
+          data: {
+            profile,
+            site_title: preferences?.siteTitle,
+            site_type: preferences?.siteType ?? 'portfolio',
+            theme: activeTheme,
+            tone,
+            instructions: instructions || undefined,
+          },
+        },
+        {
+          onSuccess: (newSite) => {
+            setCurrentSite(newSite)
+            sessionStorage.setItem(SESSION_KEY, JSON.stringify(newSite))
+            if (instructions) {
+              setTweakText('')
+            }
+          },
+          onError: (error) => {
+            const isLlmError =
+              error instanceof ApiRequestError && error.error_code === 'llm_error'
+            setToast({
+              message: isLlmError
+                ? 'Generation failed. The LLM returned an error.'
+                : 'Something went wrong. Please try again.',
+              retry: () => {
+                generate.reset()
+                handleGenerateRef.current(opts)
+              },
+            })
+          },
+        },
+      )
+    },
+    [profile, preferences, activeTheme, currentTone, generate],
+  )
+
+  useEffect(() => {
+    handleGenerateRef.current = handleGenerate
+  }, [handleGenerate])
+
+  const handleTweakSubmit = () => {
+    const text = tweakText.trim()
+    if (!text) return
+    handleGenerate({ instructions: text })
+  }
+
+  const handleTweakKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      handleTweakSubmit()
+    }
+  }
 
   if (!site) {
     return (
@@ -166,6 +292,68 @@ function PreviewPage() {
                 </button>
               ))}
             </div>
+          </div>
+
+          {/* Tone chips */}
+          <div>
+            <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-500">
+              Tone
+            </h3>
+            <div className="space-y-2">
+              {(['professional', 'playful', 'minimal'] as const).map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => {
+                    setCurrentTone(t)
+                    handleGenerate({ toneOverride: t })
+                  }}
+                  disabled={generate.isPending}
+                  className={`w-full rounded-lg border px-3 py-2.5 text-left text-sm font-medium capitalize transition-colors disabled:opacity-50 ${
+                    currentTone === t
+                      ? 'border-blue-500 bg-blue-500/10 text-blue-400'
+                      : 'border-gray-800 text-gray-300 hover:border-gray-600'
+                  }`}
+                >
+                  {t}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Regenerate */}
+          <button
+            type="button"
+            onClick={() => handleGenerate()}
+            disabled={generate.isPending}
+            className="w-full rounded-lg border border-gray-700 px-4 py-2 text-sm font-medium text-gray-300 transition-colors hover:border-gray-500 disabled:opacity-50"
+          >
+            {generate.isPending ? 'Generating...' : 'Regenerate'}
+          </button>
+
+          {/* Free-form tweak input */}
+          <div>
+            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-500">
+              Tweak Instructions
+            </h3>
+            <textarea
+              id="tweak-input"
+              rows={3}
+              placeholder={'e.g. "mention I\'m based in Berlin" or "lean harder into my Rust work"'}
+              value={tweakText}
+              onChange={(e) => setTweakText(e.target.value)}
+              onKeyDown={handleTweakKeyDown}
+              disabled={generate.isPending}
+              className="block w-full resize-none rounded-lg border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+            />
+            <button
+              type="button"
+              onClick={handleTweakSubmit}
+              disabled={generate.isPending || !tweakText.trim()}
+              className="mt-2 w-full rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {generate.isPending ? 'Applying...' : 'Apply Tweak'}
+            </button>
           </div>
         </div>
       </aside>
@@ -233,6 +421,31 @@ function PreviewPage() {
           </div>
         </div>
       </div>
+
+      {/* Toast */}
+      {toast && (
+        <div className="fixed bottom-6 right-6 z-50 max-w-sm rounded-lg border border-red-600/30 bg-red-900/80 px-4 py-3 text-sm text-red-200 shadow-lg backdrop-blur">
+          <div className="flex items-start gap-2">
+            <span className="flex-1">{toast.message}</span>
+            <div className="flex items-center gap-2">
+              {toast.retry && (
+                <button
+                  onClick={toast.retry}
+                  className="text-red-300 underline hover:text-red-100"
+                >
+                  Retry
+                </button>
+              )}
+              <button
+                onClick={() => setToast(null)}
+                className="text-red-300 hover:text-red-100"
+              >
+                &times;
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
