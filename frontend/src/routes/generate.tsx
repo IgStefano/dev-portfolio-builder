@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useEffect } from 'react'
+import { ApiError } from '../api/client'
 import { useGenerateApiGeneratePost } from '../api/generated'
 import type { GitHubProfile, SiteType, Theme } from '../api/generated'
 import { Button } from '../components/ui/button'
@@ -152,7 +153,12 @@ function GeneratePage() {
 
           {generate.isError && (
             <div className="space-y-3">
-              <p className="text-red-400">Generation failed. Please try again.</p>
+              <p className="text-lg font-semibold text-red-400">Generation failed</p>
+              <p className="text-sm text-gray-400">
+                {generate.error instanceof ApiError && generate.error.detail
+                  ? generate.error.detail
+                  : 'An unexpected error occurred while generating your site.'}
+              </p>
               <div className="flex justify-center gap-3">
                 <Button
                   onClick={() => generate.mutate({
