@@ -9,10 +9,16 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as RenderRouteImport } from './routes/render'
 import { Route as PreviewRouteImport } from './routes/preview'
 import { Route as GenerateRouteImport } from './routes/generate'
 import { Route as IndexRouteImport } from './routes/index'
 
+const RenderRoute = RenderRouteImport.update({
+  id: '/render',
+  path: '/render',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PreviewRoute = PreviewRouteImport.update({
   id: '/preview',
   path: '/preview',
@@ -33,34 +39,45 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/generate': typeof GenerateRoute
   '/preview': typeof PreviewRoute
+  '/render': typeof RenderRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/generate': typeof GenerateRoute
   '/preview': typeof PreviewRoute
+  '/render': typeof RenderRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/generate': typeof GenerateRoute
   '/preview': typeof PreviewRoute
+  '/render': typeof RenderRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/generate' | '/preview'
+  fullPaths: '/' | '/generate' | '/preview' | '/render'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/generate' | '/preview'
-  id: '__root__' | '/' | '/generate' | '/preview'
+  to: '/' | '/generate' | '/preview' | '/render'
+  id: '__root__' | '/' | '/generate' | '/preview' | '/render'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   GenerateRoute: typeof GenerateRoute
   PreviewRoute: typeof PreviewRoute
+  RenderRoute: typeof RenderRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/render': {
+      id: '/render'
+      path: '/render'
+      fullPath: '/render'
+      preLoaderRoute: typeof RenderRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/preview': {
       id: '/preview'
       path: '/preview'
@@ -89,6 +106,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   GenerateRoute: GenerateRoute,
   PreviewRoute: PreviewRoute,
+  RenderRoute: RenderRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
