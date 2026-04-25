@@ -1,10 +1,13 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { useHealthApiHealthGet } from '../api/generated'
 
 export const Route = createFileRoute('/')({
   component: HomePage,
 })
 
 function HomePage() {
+  const { data, isLoading, isError } = useHealthApiHealthGet()
+
   return (
     <div className="text-center">
       <h1 className="text-4xl font-bold tracking-tight text-gray-900 sm:text-6xl">
@@ -14,14 +17,18 @@ function HomePage() {
         Build and showcase your developer portfolio.
       </p>
       <div className="mt-10">
-        <a
-          href="/api/health"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="rounded-md bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500"
-        >
-          Check API Health
-        </a>
+        <div className="inline-flex items-center gap-2 rounded-md bg-gray-100 px-4 py-2.5 text-sm">
+          <span className="font-medium text-gray-700">API Status:</span>
+          {isLoading && (
+            <span className="text-gray-500">Checking...</span>
+          )}
+          {isError && (
+            <span className="text-red-600">Unreachable</span>
+          )}
+          {data && (
+            <span className="font-semibold text-green-600">{data.status}</span>
+          )}
+        </div>
       </div>
     </div>
   )
