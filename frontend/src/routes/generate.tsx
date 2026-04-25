@@ -31,6 +31,15 @@ function GeneratePage() {
     // invalid profile data
   }
 
+  // Persist profile + preferences for the preview page
+  if (profile) {
+    sessionStorage.setItem('dpb:profile', profileJson)
+    sessionStorage.setItem(
+      'dpb:preferences',
+      JSON.stringify({ siteTitle, siteType, theme, tone: 'professional' as const }),
+    )
+  }
+
   const generate = useGenerateApiGeneratePost({
     mutation: {
       onSuccess: (site) => {
