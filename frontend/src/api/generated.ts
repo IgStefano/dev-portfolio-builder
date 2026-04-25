@@ -324,7 +324,7 @@ export const useIngestApiIngestPost = <TError = ErrorResponse | ErrorResponse | 
     }
     
 /**
- * Accept a profile + preferences and return a generated site (stub).
+ * Accept a profile + preferences and return a generated site.
  * @summary Generate
  */
 export const generateApiGeneratePost = (

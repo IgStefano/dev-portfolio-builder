@@ -85,7 +85,7 @@
     "/api/generate": {
       "post": {
         "summary": "Generate",
-        "description": "Accept a profile + preferences and return a generated site (stub).",
+        "description": "Accept a profile + preferences and return a generated site.",
         "operationId": "generate_api_generate_post",
         "requestBody": {
           "content": {
@@ -407,7 +407,8 @@
         },
         "type": "object",
         "required": [
-          "status"
+          "status",
+          "anthropic_key_present"
         ],
         "title": "HealthResponse"
       },
