@@ -6,7 +6,6 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from fixtures.sample import SAMPLE_GENERATED_SITE
 from github_client import (
     GitHubNotFoundError,
     GitHubRateLimitError,
@@ -25,8 +24,6 @@ from schemas import (
 )
 
 load_dotenv()
-
-from fixtures.sample import SAMPLE_PROFILE  # noqa: E402
 
 app = FastAPI(title="Dev Portfolio Builder API")
 

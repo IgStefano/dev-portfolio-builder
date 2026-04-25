@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useEffect } from 'react'
-import { ApiError } from '../api/client'
+import { ApiRequestError } from '../api/client'
 import { useGenerateApiGeneratePost } from '../api/generated'
 import type { GitHubProfile, SiteType, Theme } from '../api/generated'
 import { Button } from '../components/ui/button'
@@ -11,7 +11,6 @@ type GenerateSearch = {
   siteTitle?: string
   siteType: SiteType
   theme: Theme
-  tone?: string
 }
 
 export const Route = createFileRoute('/generate')({
@@ -21,13 +20,12 @@ export const Route = createFileRoute('/generate')({
     siteTitle: search.siteTitle as string | undefined,
     siteType: (search.siteType as SiteType) ?? 'portfolio',
     theme: (search.theme as Theme) ?? 'minimal',
-    tone: (search.tone as string) ?? 'professional',
   }),
 })
 
 function GeneratePage() {
   const navigate = useNavigate()
-  const { profile: profileJson, siteTitle, siteType, theme, tone } = Route.useSearch()
+  const { profile: profileJson, siteTitle, siteType, theme } = Route.useSearch()
 
   let profile: GitHubProfile | null = null
   try {
@@ -50,14 +48,7 @@ function GeneratePage() {
       onSuccess: (site) => {
         navigate({
           to: '/preview',
-          search: {
-            site: JSON.stringify(site),
-            theme,
-            tone: tone ?? 'professional',
-            profile: profileJson,
-            siteTitle,
-            siteType,
-          },
+          search: { site: JSON.stringify(site), theme },
         })
       },
     },
@@ -71,7 +62,7 @@ function GeneratePage() {
           site_title: siteTitle,
           site_type: siteType,
           theme,
-          tone: (tone as 'professional' | 'playful' | 'minimal') ?? 'professional',
+          tone: 'professional',
         },
       })
     }
@@ -164,7 +155,7 @@ function GeneratePage() {
             <div className="space-y-3">
               <p className="text-lg font-semibold text-red-400">Generation failed</p>
               <p className="text-sm text-gray-400">
-                {generate.error instanceof ApiError && generate.error.detail
+                {generate.error instanceof ApiRequestError && generate.error.detail
                   ? generate.error.detail
                   : 'An unexpected error occurred while generating your site.'}
               </p>
@@ -176,7 +167,7 @@ function GeneratePage() {
                       site_title: siteTitle,
                       site_type: siteType,
                       theme,
-                      tone: (tone as 'professional' | 'playful' | 'minimal') ?? 'professional',
+                      tone: 'professional',
                     },
                   })}
                 >
