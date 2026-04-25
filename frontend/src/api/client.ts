@@ -1,4 +1,4 @@
-const BASE_URL = '/api'
+const BASE_URL = ''
 
 export const customInstance = async <T>({
   url,
